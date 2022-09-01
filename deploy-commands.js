@@ -10,12 +10,6 @@ const commands = [
     .setName("user")
     .setDescription("Replies with user info!"),
   new SlashCommandBuilder()
-    .setName("test1")
-    .setDescription("This is test1"),
-  new SlashCommandBuilder()
-    .setName("timetest")
-    .setDescription("Testing time"),
-  new SlashCommandBuilder()
     .setName("auc1")
     .setDescription("Resets Auction #1 time."),
   new SlashCommandBuilder()
@@ -24,6 +18,21 @@ const commands = [
   new SlashCommandBuilder()
     .setName("auc3")
     .setDescription("Resets Auction #3 time"),
+  new SlashCommandBuilder()
+    .setName("auc4")
+    .setDescription("Resets Auction #4 time"),
+  new SlashCommandBuilder()
+    .setName("auc5")
+    .setDescription("Resets Auction #5 time"),
+  new SlashCommandBuilder()
+    .setName("auc6")
+    .setDescription("Resets Auction #6 time"),
+  new SlashCommandBuilder()
+    .setName("auc7")
+    .setDescription("Resets Auction #7 time"),
+  new SlashCommandBuilder()
+    .setName("auc8")
+    .setDescription("Resets Auction #8 time"),
   new SlashCommandBuilder()
     .setName("timers")
     .setDescription("Provides a list of all auction timers."),
