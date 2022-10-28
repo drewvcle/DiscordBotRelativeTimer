@@ -1,8 +1,26 @@
-const { Client, GatewayIntentBits, Partials, Collection } = require("discord.js");
-const { Guilds, GuildMembers, GuildMessages } = GatewayIntentBits;
+import { config } from 'dotenv';
+config();
+const TOKEN = process.env.BOT_TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+import schedule from 'node-schedule';
+
+//const { Client, GatewayIntentBits, Partials, Collection, CommandInteractionOptionResolver } = require("discord.js");
+import { ChannelType, time, Client, GatewayIntentBits, Partials, Collection, CommandInteractionOptionResolver, userMention, channelMention, roleMention } from 'discord.js';
+const { Guilds, GuildMembers, GuildMessages, MessageContent } = GatewayIntentBits;
 const { User, Message, GuildMember, ThreadMember } = Partials;
-const { userMention, memberNicknameMention, channelMention, roleMention } = require('discord.js');
-const { time } = require('discord.js');
+//const { userMention, memberNicknameMention, channelMention, roleMention } = require('discord.js');
+//const { time } = require('discord.js');
+//const wait = require('node:timers/promises').setTimeout;
+import { REST } from '@discordjs/rest';
+import { channel } from 'node:diagnostics_channel';
+
+const rest = new REST({ version: '10'}).setToken(TOKEN);
+//IMPORTANT: when uploading to GitHub, FileSystem will likely not work. If it doesn't work, check https://github.com/nodejs/node/blob/main/doc/api/fs.md
+//var fs = require('fs');
+import * as fs from 'node:fs';
+
+// var LocalStorage = require('node-localstorage').LocalStorage,
+// localStorage = new LocalStorage('./scratch');
 
 // Get the difference between two relative times
 function compareTime (s1, s2){
@@ -14,47 +32,95 @@ function compareTime (s1, s2){
 
 // Constants for auction channels
 var numAucs = 8;
-const channelIDs = ['1013859742210342982', '1013859762284265513', '1013859785365524552', '1015016976978018325', '1015016994552164432', '1015017007390933113', '1015017021592834139', '1015017038852390952'];
+
+
+const channelIDs = ['979109147289198592', '892888360681631774', '899695733366722610', '892888408282759238', '899695825326841936', '962698128333611068', '1012527001040605194', '1012527044040593428'];
+// Below is auction IDs for test server
+//const channelIDs = ['1023050142342975519', '1023050154883952680', '1023050166724472872', '1023051241183531108', '1023051249630842890', '1023051258669580330', '1023051270354915389', '1023051284636508180'];
 const dates = [];
 var relatives = [];
-for (let i = 0; i < numAucs; i++){
-  dates[i] = new Date();
-  relatives[i] = time(dates[i], 'R');
-}
+var saves;
+
+fs.readFile('saveRel.txt', 'utf8', (err,data) => {
+  if (err){
+    console.log(err);
+  }
+  else if (data.length === 0) {
+    for (let i = 0; i < numAucs; i++){
+      dates[i] = new Date();
+      relatives[i] = time(dates[i], 'R');
+
+      fs.appendFile('saveRel.txt', relatives[i] + " ", function (err) {
+        if (err) throw err;
+        console.log(`Saved!`);
+      })
+      saves = data;
+    }
+  }
+  else {
+    saves = data;
+
+    for (let i = 0; i < numAucs; i++){
+      relatives[i] = saves.substring(17 * i, 16 + (17 * i));
+    }
+
+    console.log(data);
+  }
+});
 
 // Discord stuff
 const client = new Client({
-  intents: [Guilds, GuildMembers, GuildMessages],
+  intents: [Guilds, GuildMembers, GuildMessages, MessageContent],
   partials: [User, Message, GuildMember, ThreadMember],
 });
 
+//const { loadEvents } = require("./Handlers/eventHandler");
+import { loadEvents } from './Handlers/eventHandler.js';
+
+//client.config = require("./config.json");
+//import 'config.json';
+
+client.events = new Collection();
+loadEvents(client);
 
 
-client.config = require("./config.json");
 
 client.on('interactionCreate', async interaction => {
-
-	if (!interaction.isChatInputCommand()) return;
+  if (!interaction.isChatInputCommand()) {
+    return;
+  }
 
 	const { commandName } = interaction;
-
   if (commandName === 'server') {
 		await interaction.reply(`Server name: ${interaction.guild.name}\nTotal members: ${interaction.guild.memberCount}`);
 	} else if (commandName === 'user') {
 		await interaction.reply(`Your tag: ${interaction.user.tag}\nYour id: <@${interaction.user.id}>`);
-	// } else if (commandName === 'test1') {
-  //   await interaction.reply(`Channel 1: <#${interaction.channel.id}>`);
-  // } else if (commandName === 'timetest') {
-  //   await interaction.reply(timeString);
 
-  // Resets the auction cooldown. Ex. /auc1 would reset the cooldown for Auction #1
-  } else if (commandName.substring(0,3) === 'auc') {
-      let aucnum = parseInt(commandName.substring(3,4));
+  //Resets the auction cooldown.
+  } else if (commandName === 'auc'){
+      const typeInt = interaction.options.getInteger('num');
+
+      let aucnum = typeInt - 1;
+      if (aucnum < 0)
+        await interaction.reply({content: "Please type a number between 1-8.", ephemeral: true});
+
+      else if (aucnum > -1 && aucnum < 8){
       dates[aucnum] = new Date();
       relatives[aucnum] = time(dates[aucnum], 'R');
-      await interaction.reply(relatives[aucnum]);
-
-  // Previews all auction timers. Ex. /timers
+      saves = '';
+      for (let i = 0; i < numAucs; i++)
+        saves += relatives[i] + ' ';
+      
+      fs.writeFile('saveRel.txt', saves, err => {
+        if (err) {
+          console.error(err);
+        }
+      });
+      await interaction.reply({content: "Timer reset! Time: " + relatives[aucnum], ephemeral: true});
+    } else if (aucnum > 7)
+      await interaction.reply({content: "Please type a number between 1-8.", ephemeral: true});
+  
+ // Previews all auction timers. Ex. /timers
   } else if (commandName === 'timers'){
     const datenow = new Date();
     var dn = time(datenow);
@@ -67,12 +133,34 @@ client.on('interactionCreate', async interaction => {
     for (let i = 0; i < numAucs; i++)
       messageTimes += `${channelMention(channelIDs[i])}: ` + relatives[i] + '.\n';
 
-    await interaction.reply(messageTimes);
-  }
+    await interaction.reply({content: messageTimes});
+  } 
 });
 
-client.login(client.config.token);
+//client.login(client.config.token);
+client.login(TOKEN);
 
 
 
+
+
+
+// Ping handler after 24 hours...
+
+//git init
+// git add *
+// git commit -m "some title"
+// git branch -M main
+// git remote add origin https://github.com/drewvcle/DiscBotHeroku.git
+// git push -u origin main
+
+//OR
+// git add *
+// git commit -m "some title"
+// git push
+
+
+//npm i node-schedule
+//npm i discord.js @discordjs/rest
+//npm i -D nodemon dotenv
 
